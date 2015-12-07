@@ -13,13 +13,12 @@ func main() {
 
 	// THIS IS JUST EXPERIMENTATION
 
-	fmt.Println(os.Args)
 	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, "Usage: ast file.go")
 		os.Exit(1)
 	}
 	in := os.Args[1]
-	fmt.Println("Processing", in)
+	fmt.Fprintln(os.Stderr, "Processing", in)
 
 	// Open program, get it AST
 	fset := token.NewFileSet()
@@ -29,15 +28,17 @@ func main() {
 	}
 
 	// Apply some changes
-	ast.Walk(Alterer{}, f)
+	ast.Walk(alterer{fset}, f)
 
 	// Print altered program
 	format.Node(os.Stdout, fset, f)
 }
 
-type Alterer struct{}
+type alterer struct {
+	fset *token.FileSet
+}
 
-func (a Alterer) Visit(node ast.Node) (w ast.Visitor) {
+func (a alterer) Visit(node ast.Node) (w ast.Visitor) {
 
 	// Replace 4 with 666
 	if bl, ok := node.(*ast.BasicLit); ok {
@@ -57,5 +58,15 @@ func (a Alterer) Visit(node ast.Node) (w ast.Visitor) {
 		is.Else = nil
 	}
 
+	// Use original line
+	if node != nil {
+		p := node.Pos()
+		f := a.fset.File(p)
+		//		if f.Line(p) == 13 {
+		fmt.Fprintf(os.Stderr, "Found <<<%v>>> at line %v \n", node, f.Line(p))
+		//		}
+	}
+
+	// Return self, for recursive calls on children
 	return a
 }
