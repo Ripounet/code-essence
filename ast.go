@@ -28,7 +28,8 @@ func main() {
 	}
 
 	// Apply some changes
-	ast.Walk(alterer{fset}, f)
+	ast.Walk(remover{fset, []int{7, 6, 10}}, f)
+	//ast.Walk(alterer{fset}, f)
 
 	// Print altered program
 	format.Node(os.Stdout, fset, f)
@@ -63,10 +64,42 @@ func (a alterer) Visit(node ast.Node) (w ast.Visitor) {
 		p := node.Pos()
 		f := a.fset.File(p)
 		//		if f.Line(p) == 13 {
-		fmt.Fprintf(os.Stderr, "Found <<<%v>>> at line %v \n", node, f.Line(p))
+		_, ok1 := node.(*ast.ExprStmt)
+		_, ok2 := node.(*ast.BasicLit)
+		if ok1 || ok2 {
+			fmt.Fprintf(os.Stderr, "Found <<<%T: %v>>> at line %v \n", node, node, f.Line(p))
+		}
 		//		}
 	}
 
 	// Return self, for recursive calls on children
 	return a
+}
+
+// remover deletes nodes starting at specific lines
+type remover struct {
+	fset        *token.FileSet
+	lineNumbers []int
+}
+
+func (r remover) Visit(node ast.Node) (w ast.Visitor) {
+	if node != nil {
+		p := node.Pos()
+		f := r.fset.File(p)
+		if in(f.Line(p), r.lineNumbers) {
+			fmt.Println("MUST. DESTROY. %T: %v", node, node)
+			// TODO: how the heck shall I remove a Node?
+			return nil
+		}
+	}
+	return r
+}
+
+func in(needle int, hay []int) bool {
+	for _, j := range hay {
+		if j == needle {
+			return true
+		}
+	}
+	return false
 }

@@ -13,6 +13,6 @@ func main() {
 		fmt.Println(3)
 	} else {
 		fmt.Println(4)
-		fmt.Println(4)
+		fmt.Println(5)
 	}
 }
