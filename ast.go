@@ -9,16 +9,16 @@ import (
 	"os"
 )
 
-func main() {
+func main0() {
 
 	// THIS IS JUST EXPERIMENTATION
 
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "Usage: ast file.go")
+		info("Usage: ast file.go")
 		os.Exit(1)
 	}
 	in := os.Args[1]
-	fmt.Fprintln(os.Stderr, "Processing", in)
+	info("Processing", in)
 
 	// Open program, get it AST
 	fset := token.NewFileSet()
@@ -28,7 +28,9 @@ func main() {
 	}
 
 	// Apply some changes
-	ast.Walk(remover{fset, []int{7, 6, 10}}, f)
+	r := &remover{fset, []int{7, 6, 10}, 0}
+	ast.Walk(r, f)
+	info("remove made", r.visits, "visits")
 	//ast.Walk(alterer{fset}, f)
 
 	// Print altered program
@@ -39,7 +41,7 @@ type alterer struct {
 	fset *token.FileSet
 }
 
-func (a alterer) Visit(node ast.Node) (w ast.Visitor) {
+func (a *alterer) Visit(node ast.Node) (w ast.Visitor) {
 
 	// Replace 4 with 666
 	if bl, ok := node.(*ast.BasicLit); ok {
@@ -80,16 +82,25 @@ func (a alterer) Visit(node ast.Node) (w ast.Visitor) {
 type remover struct {
 	fset        *token.FileSet
 	lineNumbers []int
+	visits      int
 }
 
-func (r remover) Visit(node ast.Node) (w ast.Visitor) {
+func (r *remover) Visit(node ast.Node) (w ast.Visitor) {
+	r.visits++
 	if node != nil {
-		p := node.Pos()
-		f := r.fset.File(p)
-		if in(f.Line(p), r.lineNumbers) {
-			fmt.Println("MUST. DESTROY. %T: %v", node, node)
-			// TODO: how the heck shall I remove a Node?
-			return nil
+		if bs, ok := node.(*ast.BlockStmt); ok {
+			kept := make([]ast.Stmt, 0, len(bs.List))
+			for _, stmt := range bs.List {
+				node := stmt
+				p := node.Pos()
+				f := r.fset.File(p)
+				if in(f.Line(p), r.lineNumbers) {
+					fmt.Fprintf(os.Stderr, "DESTROYING %T from line %d\n", node, f.Line(p))
+				} else {
+					kept = append(kept, stmt)
+				}
+			}
+			bs.List = kept
 		}
 	}
 	return r
@@ -102,4 +113,8 @@ func in(needle int, hay []int) bool {
 		}
 	}
 	return false
+}
+
+func info(args ...interface{}) {
+	fmt.Fprintln(os.Stderr, args...)
 }
