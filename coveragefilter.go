@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-func main() {
+func main00() {
 	if len(os.Args) < 3 {
 		info("Usage: coveragefilter file.go profile.out")
 		os.Exit(1)
