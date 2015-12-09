@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"go/ast"
 	"go/format"
 	"go/parser"
@@ -45,7 +46,43 @@ type errignorer struct {
 
 func (ei *errignorer) Visit(node ast.Node) (w ast.Visitor) {
 	if node != nil {
-		// TODO
+		switch parent := node.(type) {
+		case *ast.BlockStmt:
+			kept := make([]ast.Stmt, 0, len(parent.List))
+			for _, stmt := range parent.List {
+				keep := true
+				switch child := stmt.(type) {
+				case *ast.IfStmt:
+					be, ok := child.Cond.(*ast.BinaryExpr)
+					if !ok {
+						break
+					}
+					ident, ok := be.X.(*ast.Ident)
+					if !ok {
+						break
+					}
+					// TODO: fix all this mess
+					fmt.Printf("ident.Obj.Decl = %T %v \n", ident.Obj.Decl, ident.Obj.Decl)
+					isErr := true //be.X.(*ast.Object).Kind == ast.Var
+					isDiff := be.Op == token.NEQ
+					bl, ok := be.Y.(*ast.BasicLit)
+					if !ok {
+						break
+					}
+					isNil := bl.Value == "nil"
+					isTestErrDiffNil := isErr && isDiff && isNil
+					if isTestErrDiffNil {
+						fmt.Fprintln(os.Stderr, "Found err check", be)
+					}
+				}
+				if keep {
+					kept = append(kept, stmt)
+				} else {
+					fmt.Fprintf(os.Stderr, "DESTROYING %T \n", stmt)
+				}
+			}
+			parent.List = kept
+		}
 	}
 	// For recursion
 	return ei
