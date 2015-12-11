@@ -75,6 +75,12 @@ func (ei *errignorer) Visit(node ast.Node) (w ast.Visitor) {
 					isTestErrDiffNil := isErr && isDiff && isNil
 					if isTestErrDiffNil {
 						fmt.Fprintln(os.Stderr, "Found err check", be)
+						keep = false
+						// But we want to keep the ELSE block!!
+						// If exists, it is the actual main code.
+						if child.Else != nil {
+							kept = append(kept, child.Else)
+						}
 					}
 				}
 				if keep {
