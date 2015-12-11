@@ -105,16 +105,3 @@ func (r *remover) Visit(node ast.Node) (w ast.Visitor) {
 	}
 	return r
 }
-
-func in(needle int, hay []int) bool {
-	for _, j := range hay {
-		if j == needle {
-			return true
-		}
-	}
-	return false
-}
-
-func info(args ...interface{}) {
-	fmt.Fprintln(os.Stderr, args...)
-}

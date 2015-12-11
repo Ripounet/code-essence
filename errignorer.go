@@ -8,6 +8,7 @@ import (
 	"go/token"
 	"io"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -51,25 +52,26 @@ func (ei *errignorer) Visit(node ast.Node) (w ast.Visitor) {
 			kept := make([]ast.Stmt, 0, len(parent.List))
 			for _, stmt := range parent.List {
 				keep := true
+				//infof("stmt = %T %v", stmt, stmt)
 				switch child := stmt.(type) {
 				case *ast.IfStmt:
 					be, ok := child.Cond.(*ast.BinaryExpr)
 					if !ok {
 						break
 					}
-					ident, ok := be.X.(*ast.Ident)
+					identL, ok := be.X.(*ast.Ident)
 					if !ok {
 						break
 					}
-					// TODO: fix all this mess
-					fmt.Printf("ident.Obj.Decl = %T %v \n", ident.Obj.Decl, ident.Obj.Decl)
-					isErr := true //be.X.(*ast.Object).Kind == ast.Var
+					// TODO: checking name only is a dirty approximation.
+					// Try to check type instead.
+					isErr := strings.HasPrefix(identL.Obj.Name, "err")
 					isDiff := be.Op == token.NEQ
-					bl, ok := be.Y.(*ast.BasicLit)
+					identR, ok := be.Y.(*ast.Ident)
 					if !ok {
 						break
 					}
-					isNil := bl.Value == "nil"
+					isNil := identR.Name == "nil"
 					isTestErrDiffNil := isErr && isDiff && isNil
 					if isTestErrDiffNil {
 						fmt.Fprintln(os.Stderr, "Found err check", be)
