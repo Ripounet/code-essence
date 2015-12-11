@@ -65,21 +65,27 @@ func (ei *errignorer) Visit(node ast.Node) (w ast.Visitor) {
 					}
 					// TODO: checking name only is a dirty approximation.
 					// Try to check type instead.
-					isErr := strings.HasPrefix(identL.Obj.Name, "err")
-					isDiff := be.Op == token.NEQ
+					isLeftErr := strings.HasPrefix(identL.Obj.Name, "err")
 					identR, ok := be.Y.(*ast.Ident)
 					if !ok {
 						break
 					}
-					isNil := identR.Name == "nil"
-					isTestErrDiffNil := isErr && isDiff && isNil
-					if isTestErrDiffNil {
+					isRightNil := identR.Name == "nil"
+					if isLeftErr && isRightNil {
 						fmt.Fprintln(os.Stderr, "Found err check", be)
-						keep = false
-						// But we want to keep the ELSE block!!
-						// If exists, it is the actual main code.
-						if child.Else != nil {
-							kept = append(kept, child.Else)
+						switch be.Op {
+						case token.NEQ:
+							keep = false
+							// But we want to keep the ELSE block!!
+							// If exists, it is the actual main code.
+							if child.Else != nil {
+								kept = append(kept, child.Else)
+							}
+						case token.EQL:
+							keep = false
+							// But we want to keep the BODY block!!
+							// It is the actual main code.
+							kept = append(kept, child.Body)
 						}
 					}
 				}

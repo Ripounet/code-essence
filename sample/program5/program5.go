@@ -38,5 +38,10 @@ func parse(date string) (year, month, day int, err error) {
 		return
 	}
 	day, err = strconv.Atoi(parts[2])
+	if err == nil {
+		fmt.Println("Cool.")
+	} else {
+		fmt.Println("Not cool.")
+	}
 	return
 }
