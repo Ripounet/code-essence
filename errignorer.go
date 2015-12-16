@@ -73,19 +73,31 @@ func (ei *errignorer) Visit(node ast.Node) (w ast.Visitor) {
 					isRightNil := identR.Name == "nil"
 					if isLeftErr && isRightNil {
 						fmt.Fprintln(os.Stderr, "Found err check", be)
+						fmt.Fprintf(os.Stderr, "body: %T \n", child.Body)
+						fmt.Fprintf(os.Stderr, "else: %T \n", child.Else)
 						switch be.Op {
 						case token.NEQ:
 							keep = false
 							// But we want to keep the ELSE block!!
 							// If exists, it is the actual main code.
 							if child.Else != nil {
-								kept = append(kept, child.Else)
+								switch strictness {
+								case Strict:
+									kept = append(kept, child.Else)
+								case Loose, Exotic:
+									kept = appendNodes(kept, child.Else)
+								}
 							}
 						case token.EQL:
 							keep = false
 							// But we want to keep the BODY block!!
 							// It is the actual main code.
-							kept = append(kept, child.Body)
+							switch strictness {
+							case Strict:
+								kept = append(kept, child.Body)
+							case Loose, Exotic:
+								kept = appendNodes(kept, child.Body)
+							}
 						}
 					}
 				}
@@ -100,4 +112,13 @@ func (ei *errignorer) Visit(node ast.Node) (w ast.Visitor) {
 	}
 	// For recursion
 	return ei
+}
+
+func appendNodes(list []ast.Stmt, stmt ast.Stmt) []ast.Stmt {
+	switch x := stmt.(type) {
+	case *ast.BlockStmt:
+		return append(list, x.List...)
+	default:
+		return append(list, x)
+	}
 }
