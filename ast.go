@@ -9,6 +9,21 @@ import (
 	"os"
 )
 
+type Strictness int
+
+const (
+	// Strict rewriting aims at being compilable, while less verbose than the original code.
+	Strict Strictness = iota
+
+	// Loose rewriting is more concise, more readable, but might not be compilable.
+	Loose
+
+	// Exotic rewriting invents new keywords "because", etc.
+	Exotic
+)
+
+var strictness = Loose
+
 func main0() {
 
 	// THIS IS JUST EXPERIMENTATION
