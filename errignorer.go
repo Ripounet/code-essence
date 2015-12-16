@@ -34,6 +34,7 @@ func errorIgnoreFilter(in string, out io.Writer) error {
 
 	killer := &errignorer{fset}
 	ast.Walk(killer, file)
+	info("")
 
 	// Print altered program
 	format.Node(out, fset, file)
@@ -97,6 +98,16 @@ func (ei *errignorer) Visit(node ast.Node) (w ast.Visitor) {
 								kept = append(kept, child.Body)
 							case Loose, Exotic:
 								kept = appendNodes(kept, child.Body)
+							}
+						}
+					}
+				case *ast.ExprStmt:
+					if expr, ok := child.X.(*ast.CallExpr); ok {
+						if selexpr, ok := expr.Fun.(*ast.SelectorExpr); ok {
+							if selexpr.Sel.Name == "Exit" {
+								if left, ok := selexpr.X.(*ast.Ident); ok && left.Name == "os" {
+									infof("Found an Exit call : %v \n", expr.Fun)
+								}
 							}
 						}
 					}
